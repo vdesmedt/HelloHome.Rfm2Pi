@@ -37,7 +37,7 @@ script:
   - echo ${TRAVIS_BUILD_DIR}/src/version.h
   - platformio ci --keep-build-dir --board=moteino src/
 before_deploy:
-  - cp .pioenvs/moteino/firmware.hex .pioenvs/moteino/rfm2pi-${shash}.hex
+#  - cp .pioenvs/moteino/firmware.hex .pioenvs/moteino/rfm2pi-${shash}.hex
 deploy:
   provider: releases
   api_key: $GITHUB_TOKEN
