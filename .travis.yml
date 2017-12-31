@@ -38,12 +38,12 @@ script:
   - platformio ci --keep-build-dir --board=moteino src/
 before_deploy:
 #  - cp .pioenvs/moteino/firmware.hex .pioenvs/moteino/rfm2pi-${shash}.hex
+ - ls ${TRAVIS_BUILD_DIR}/.pioenvs/moteino
 deploy:
   provider: releases
   api_key: $GITHUB_TOKEN
   file_glob: true
-  file: .pioenvs/moteino/firmware.hex
-  file: .pioenvs/moteino/rfm2pi-${shash}.hex
+  file: ${TRAVIS_BUILD_DIR}/.pioenvs/moteino/firmware.hex
   skip_cleanup: true
   on:
     tags: true
