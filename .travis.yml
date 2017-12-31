@@ -37,14 +37,14 @@ script:
   - echo ${TRAVIS_BUILD_DIR}/src/version.h
   - platformio run
 before-deploy:
-  - echo 'Hello defore-deploy'
   - platformio ci --keep-build-dir --board=moteino src/
-  - cp ${TRAVIS_BUILD_DIR}/.pioenvs/moteino/firmware.hex ${TRAVIS_BUILD_DIR}/.pioenvs/moteino/rfm2pi-${shash}.hex
+#  - cp ${TRAVIS_BUILD_DIR}/.pioenvs/moteino/firmware.hex ${TRAVIS_BUILD_DIR}/.pioenvs/moteino/rfm2pi-${shash}.hex
 deploy:
   provider: releases
   api_key: $GITHUB_TOKEN
   file_glob: true
-  file: ${TRAVIS_BUILD_DIR}/.pioenvs/moteino/rfm2pi-${shash}.hex
+#  file: ${TRAVIS_BUILD_DIR}/.pioenvs/moteino/rfm2pi-${shash}.hex
+  file: ${TRAVIS_BUILD_DIR}/.pioenvs/moteino/firmware.hex
   skip_cleanup: true
   on:
     tags: true
