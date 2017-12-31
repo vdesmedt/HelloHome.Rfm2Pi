@@ -65,8 +65,6 @@ void setup() {
   pinMode(LED, OUTPUT);
   Serial.begin(SERIAL_BAUD);
   while(!Serial);
-  Serial.print(F("//StraitRFM69ToPi started on network "));
-  Serial.println(NETWORKID);
 
 #ifdef IS_RFM69HW
   snprintf(netId, 20, "HW-%d [%s]", NETWORKID, VERSION);
