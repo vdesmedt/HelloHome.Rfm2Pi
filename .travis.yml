@@ -35,10 +35,10 @@ script:
   - shash=$(echo ${TRAVIS_COMMIT} | cut -c 1-7)
   - sed -i -e "s/CiSubstErr/${shash}/g" ${TRAVIS_BUILD_DIR}/src/version.h
   - echo ${TRAVIS_BUILD_DIR}/src/version.h
-  - platformio ci --keep-build-dir --board=moteino src/
+  - platformio run
 before_deploy:
-#  - cp .pioenvs/moteino/firmware.hex .pioenvs/moteino/rfm2pi-${shash}.hex
- - ls ${TRAVIS_BUILD_DIR}/.pioenvs/moteino
+  - cp .pioenvs/moteino/firmware.hex .pioenvs/moteino/rfm2pi-${shash}.hex
+  - ls ${TRAVIS_BUILD_DIR}/.pioenvs/moteino
 deploy:
   provider: releases
   api_key: $GITHUB_TOKEN
