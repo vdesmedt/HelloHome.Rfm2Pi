@@ -11,11 +11,12 @@
 //It allows to reveive from RFM69 and communicate the payload added with the issuer nodeId to R-Pi
 //It also allow for remote programming the Rfm69 node in the network
 #include <version.h>
+#include <Wire.h>
+#include <ssd1306.h>
 #include <Arduino.h>
 #include <RFM69.h>
 #include <SPI.h>
 #include <SPIFlash.h>
-#include <U8glib.h>
 
 #define VER_MAJOR   1
 #define VER_MINOR   2
@@ -26,6 +27,7 @@
 //#define IS_RFM69HW
 #define ACK_TIME    50  // # of ms to wait for an ack
 #define TIMEOUT     3000
+#define LOGSIZE     6
 
 #ifdef __AVR_ATmega1284P__
   #define LED           15 // Moteino MEGAs have LEDs on D15
@@ -34,7 +36,6 @@
 #endif
 #define SERIAL_BAUD       115200
 
-U8GLIB_SSD1306_128X64 u8g(U8G_I2C_OPT_NO_ACK);
 RFM69 radio;
 char gtwBuffer[100];
 byte gtwBufferLength;
@@ -47,9 +48,10 @@ byte targetID=0;
 //Logging
 char netId[20]; //Node identification to be displayed
 char screenLogLine[20];
-char screenLog[4][20];
-long screenLogTimes[4];
-long lastLogMillis = 0;
+char screenLog[LOGSIZE][20];
+unsigned long screenLogTimes[LOGSIZE];
+
+unsigned long lastLogMillis = 0;
 int screenLogIndex = 0;
 
 void addToScreenLog(const char * log);
@@ -72,8 +74,9 @@ void setup() {
   snprintf(netId, 20, "W-%d [%s]", NETWORKID, VERSION);
 #endif
 
-  u8g.firstPage();
-  do { draw(); } while(u8g.nextPage());
+  ssd1306_128x64_i2c_init();
+  ssd1306_fillScreen(0x00);
+  draw();
 }
 
 void loop() {
@@ -113,41 +116,34 @@ void loop() {
         addToScreenLog(screenLogLine);
       }
     }
-    u8g.firstPage();
-    do { draw(); } while(u8g.nextPage());
+    long start = millis();
+    draw();
+    long stop = millis() - start;
+    Serial.print("Printing took (ms) ");
+    Serial.println(stop);
 }
 
 void addToScreenLog(const char * log) {
     strncpy(screenLog[screenLogIndex], log, 20);
     screenLogTimes[screenLogIndex] = millis();
-    screenLogIndex = ++screenLogIndex % 4;
+    screenLogIndex = ++screenLogIndex % LOGSIZE;
 }
 
-void draw(void) {
-  //NodeIdentification
-  u8g.setFont(u8g_font_6x10);
-  u8g.drawStr(0, 15, netId);
-
-  //Send/Receive icons
-  u8g.setFont(u8g_font_6x13_67_75);
-  if(receiving) {
-    u8g.drawStr(120, 13, "<");
-  }
-  if(sending) {
-    u8g.drawStr(120, 15, "A");
-  }
-
-  //Log
-  u8g.setFont(u8g_font_6x10);
+void draw(void ) {
+  ssd1306_charF6x8(0, 0, netId);
   int logIndex = 0;
-  for(logIndex = 1 ; logIndex <= 4 ; logIndex++) {
-    int y = 15+(5-logIndex)*10;
-    int i = (screenLogIndex-logIndex+8) % 4;
-    int s = (millis()-screenLogTimes[i])/1000;
-    int m = s/60;
-    s = s%60;
-    snprintf(screenLogLine, 20, "%02i:%02i", m, s);
-    u8g.drawStr(0, y, screenLogLine);
-    u8g.drawStr(35, y, screenLog[i]);
+  for(logIndex = 1 ; logIndex <= LOGSIZE ; logIndex++) 
+  {
+    int i = (screenLogIndex-logIndex+8) % LOGSIZE;
+    unsigned int s = (millis()-screenLogTimes[i])/1000;
+    if(s < 5 * 60)
+      snprintf(screenLogLine, 20, "%3is", s);
+    else if (s < 120 * 60)
+      snprintf(screenLogLine, 20, "%3im", s/60);
+    else
+      snprintf(screenLogLine, 20, "%3ih", s/3600);
+
+    ssd1306_charF6x8(0, logIndex+1, screenLogLine);
+    ssd1306_charF6x8(35, logIndex+1, screenLog[i]);
   }
 }
