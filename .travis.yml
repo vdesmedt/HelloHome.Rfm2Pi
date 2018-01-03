@@ -31,6 +31,7 @@ install:
   - pip install -U platformio
   - platformio lib -g install 92
   - platformio lib -g install 7
+  - platformio lib -g install 1904
 script:
   - shash=$(echo ${TRAVIS_COMMIT} | cut -c 1-7)
   - sed -i -e "s/CiSubstErr/${shash}/g" ${TRAVIS_BUILD_DIR}/src/version.h
