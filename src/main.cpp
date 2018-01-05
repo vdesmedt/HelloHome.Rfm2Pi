@@ -131,15 +131,13 @@ bool draw(void ) {
     int i = (screenLogIndex-logIndex+8) % LOGSIZE;
     unsigned long s = (millis()-screenLogTimes[i])/1000;
     unsigned int sec = s % 60L;
-    unsigned int min = (s / 60L) % 60L;
-    unsigned int hou = (s % 86400L) / 3600L;
+    unsigned int min = ((s - sec) / 60L) % 60L;
+    unsigned int hou = ((s -sec - 60 * min) / 3600L) % 3600L;
     
-    if(hou > 0) {
+    if(hou > 0) 
       snprintf(screenLogLine, 20, "%02i:%02i", hou, min);
-    }
-    else {
+    else 
       snprintf(screenLogLine, 20, "%02i:%02i", min, sec);
-    }
 
     ssd1306_charF6x8(0, logIndex+1, screenLogLine);
     ssd1306_charF6x8(35, logIndex+1, screenLog[i]);
