@@ -18,13 +18,11 @@
 #include <SPI.h>
 #include <SPIFlash.h>
 
-#define VER_MAJOR   1
-#define VER_MINOR   2
-#define NETWORKID   50  //50:DEV 150:TST 250:PRO
+#define PIN_PRO     6
+#define PIN_HW      5
 #define NODEID      254
 #define FREQUENCY   RF69_868MHZ
 #define ENCRYPTKEY  "passiondesfruits" //(16 bytes of your choice - keep the same on all encrypted nodes)
-//#define IS_RFM69HW
 #define ACK_TIME    50  // # of ms to wait for an ack
 #define TIMEOUT     3000
 #define LOGSIZE     6
@@ -37,11 +35,15 @@
 #define SERIAL_BAUD       115200
 
 RFM69 radio;
+uint8_t networkId = 0;
+bool rfm69_hw = false;
+
 char gtwBuffer[100];
 byte gtwBufferLength;
 char serBuffer[100];
 byte serBufferLength;
 byte targetID=0;
+
 
 //Logging
 char netId[20]; //Node identification to be displayed
@@ -56,25 +58,22 @@ void addToScreenLog(const char * log);
 bool draw(void);
 
 void setup() {
-  radio.initialize(FREQUENCY,NODEID,NETWORKID);
-  radio.encrypt(ENCRYPTKEY);
-#ifdef IS_RFM69HW
-  radio.setHighPower();
-#endif
-
+  pinMode(PIN_HW, INPUT_PULLUP);
+  pinMode(PIN_PRO, INPUT_PULLUP);
   pinMode(LED, OUTPUT);
+  networkId = digitalRead(PIN_PRO)==LOW?50:51;
+  rfm69_hw = digitalRead(PIN_HW) == LOW;
+
+  radio.initialize(RF69_868MHZ, NODEID, networkId);
+  radio.encrypt(ENCRYPTKEY);
+  radio.setHighPower(rfm69_hw);
+  snprintf(netId, 20, "%s-%d [%s]", rfm69_hw?"HW":"W", networkId, VERSION);
+
   Serial.begin(SERIAL_BAUD);
   while(!Serial);
 
-#ifdef IS_RFM69HW
-  snprintf(netId, 20, "HW-%d [%s]", NETWORKID, VERSION);
-#else
-  snprintf(netId, 20, "W-%d [%s]", NETWORKID, VERSION);
-#endif
-
   ssd1306_128x64_i2c_init();
   ssd1306_fillScreen(0x00);
-  ssd1306_charF6x8(0, 0, netId);
 }
 
 void loop() {
@@ -112,6 +111,23 @@ void loop() {
       }
     }
 
+    //Detect dip switch changes
+    uint8_t new_networkId = digitalRead(PIN_PRO)==LOW?50:51;
+    bool new_rfm69_hw = digitalRead(PIN_HW) == LOW;
+    if(new_networkId != networkId || new_rfm69_hw != rfm69_hw) {
+      delay(50); //Anti bouncing
+      new_networkId = digitalRead(PIN_PRO)==LOW?50:51;
+      new_rfm69_hw = digitalRead(PIN_HW) == LOW;
+      if(new_networkId != networkId) {
+        networkId = new_networkId;
+        radio.setNetwork(networkId);
+      }
+      if(new_rfm69_hw != rfm69_hw) {
+        rfm69_hw =new_rfm69_hw;
+        radio.setHighPower(rfm69_hw);
+      }        
+      snprintf(netId, 20, "%s-%d [%s]", rfm69_hw?"HW":"W", networkId, VERSION);
+    }
     draw();
 }
 
@@ -123,8 +139,12 @@ void addToScreenLog(const char * log) {
 
 unsigned long lastPrint = millis();
 bool draw(void ) {
+  //Draw only every 500ms
   if(millis()-lastPrint < 500)
     return false;
+
+  ssd1306_charF6x8(0, 0, netId);
+
   int logIndex = 0;
   for(logIndex = 1 ; logIndex <= LOGSIZE ; logIndex++) 
   {
