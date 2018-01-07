@@ -149,10 +149,10 @@ bool draw(void ) {
   for(logIndex = 1 ; logIndex <= LOGSIZE ; logIndex++) 
   {
     int i = (screenLogIndex-logIndex+8) % LOGSIZE;
-    unsigned long s = (millis()-screenLogTimes[i])/1000;
-    unsigned int sec = s % 60L;
-    unsigned int min = ((s - sec) / 60L) % 60L;
-    unsigned int hou = ((s -sec - 60 * min) / 3600L) % 3600L;
+    unsigned long s = (millis()-screenLogTimes[i])/1000L;
+    uint8_t sec = (uint8_t)(s % 60L);
+    uint8_t min = (uint8_t)(((s - sec) / 60L) % 60L);
+    uint8_t hou = (uint8_t)(((s - sec - 60 * min) / 3600L));
     
     if(hou > 0) 
       snprintf(screenLogLine, 20, "%02i:%02i", hou, min);
