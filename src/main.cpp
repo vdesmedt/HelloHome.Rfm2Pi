@@ -94,7 +94,7 @@ void loop() {
 
       Serial.write(gtwBuffer, gtwBufferLength);
       Serial.println("");
-      snprintf(screenLogLine, 20, "%d fr %d (%d)", gtwBuffer[3], gtwBuffer[0], (int)gtwBuffer[1]);
+      snprintf(screenLogLine, 20, "%d fr %d (%d)", (unsigned char)gtwBuffer[3], (uint8_t)gtwBuffer[0], (int)gtwBuffer[1]);
       addToScreenLog(screenLogLine);
       digitalWrite(LED,LOW);
     }
@@ -148,7 +148,7 @@ bool draw(void ) {
   int logIndex = 0;
   for(logIndex = 1 ; logIndex <= LOGSIZE ; logIndex++) 
   {
-    int i = (screenLogIndex-logIndex+8) % LOGSIZE;
+    int i = (screenLogIndex-logIndex+2*LOGSIZE) % LOGSIZE;
     unsigned long s = (millis()-screenLogTimes[i])/1000L;
     uint8_t sec = (uint8_t)(s % 60L);
     uint8_t min = (uint8_t)(((s - sec) / 60L) % 60L);
@@ -159,8 +159,8 @@ bool draw(void ) {
     else 
       snprintf(screenLogLine, 20, "%02i:%02i", min, sec);
 
-    ssd1306_charF6x8(0, logIndex+1, screenLogLine);
-    ssd1306_charF6x8(35, logIndex+1, screenLog[i]);
+    ssd1306_charF6x8(0, LOGSIZE-logIndex+2, screenLogLine);
+    ssd1306_charF6x8(35, LOGSIZE-logIndex+2, screenLog[i]);
   }
   lastPrint = millis();
   return true;
