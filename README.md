@@ -2,8 +2,8 @@
 
 Used as gateway between RFM69 and any serial enabled devices (i.e. Raspberry Pi).
 
-- All messages received from RFM69 are prefixed with rfAddress (1 byte) and RSSI (2 bytes) and send over serial port
-- All messages received from serial port should be prefixed un rfAddress (1 byte)
+- All messages received from RFM69 are prefixed with rfAddress (1 byte) and RSSI (2 bytes) and send over serial port (CR LF used a separator)
+- All messages received from serial port should be prefixed with rfAddress (1 byte) and ended with CR LF
 
 Support a SSD1306 based LCD screen to display :
 - RFM69 familly (H / HW)
