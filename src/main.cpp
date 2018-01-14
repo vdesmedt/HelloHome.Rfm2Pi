@@ -94,7 +94,7 @@ void loop() {
 
       Serial.write(gtwBuffer, gtwBufferLength);
       Serial.println("");
-      snprintf(screenLogLine, 20, "%d fr %d (%d)", (unsigned char)gtwBuffer[3], (uint8_t)gtwBuffer[0], (int)gtwBuffer[1]);
+      snprintf(screenLogLine, 20, "%d<-%d (%d)", (unsigned char)gtwBuffer[3], (uint8_t)gtwBuffer[0], (int)gtwBuffer[1]);
       addToScreenLog(screenLogLine);
       digitalWrite(LED,LOW);
     }
@@ -105,7 +105,7 @@ void loop() {
         digitalWrite(LED, HIGH);
         bool success = radio.sendWithRetry(serBuffer[0], serBuffer+1, serBufferLength-3, 3, 40);
         digitalWrite(LED, LOW);
-        snprintf(screenLogLine, 20, "%d to %d (%s-%d)", serBuffer[1], (uint8_t)serBuffer[0], success?"OK":"NOK", radio.RSSI);
+        snprintf(screenLogLine, 20, "%d->%d (%s-%d)", serBuffer[1], (uint8_t)serBuffer[0], success?"OK":"NK", radio.RSSI);
         serBufferLength = 0;
         addToScreenLog(screenLogLine);
       }
