@@ -94,7 +94,7 @@ void loop() {
 
       Serial.write(gtwBuffer, gtwBufferLength);
       Serial.println("");
-      snprintf(screenLogLine, 20, "%d<-%d (%d)", (unsigned char)gtwBuffer[3], (uint8_t)gtwBuffer[0], (int)gtwBuffer[1]);
+      snprintf(screenLogLine, 20, "< %02d %03d %03d", (unsigned char)gtwBuffer[3], (uint8_t)gtwBuffer[0], (int)gtwBuffer[1]);
       addToScreenLog(screenLogLine);
       digitalWrite(LED,LOW);
     }
@@ -105,7 +105,7 @@ void loop() {
         digitalWrite(LED, HIGH);
         bool success = radio.sendWithRetry(serBuffer[0], serBuffer+1, serBufferLength-3, 3, 40);
         digitalWrite(LED, LOW);
-        snprintf(screenLogLine, 20, "%d->%d (%s-%d)", serBuffer[1], (uint8_t)serBuffer[0], success?"OK":"NK", radio.RSSI);
+        snprintf(screenLogLine, 20, "> %02d %03d %03d", serBuffer[1], (uint8_t)serBuffer[0], success?radio.RSSI:0);
         serBufferLength = 0;
         addToScreenLog(screenLogLine);
       }
@@ -140,11 +140,12 @@ void addToScreenLog(const char * log) {
 unsigned long lastPrint = millis();
 bool draw(void ) {
   //Draw only every 500ms
-  if(millis()-lastPrint < 500)
+  if(millis()-lastPrint < 1000)
     return false;
 
   ssd1306_charF6x8(0, 0, netId);
-
+  ssd1306_charF6x8(0, 1, "      d mt rfi rss");
+  
   int logIndex = 0;
   for(logIndex = 1 ; logIndex <= LOGSIZE ; logIndex++) 
   {
