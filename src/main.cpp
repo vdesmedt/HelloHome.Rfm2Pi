@@ -103,7 +103,7 @@ void loop() {
       serBuffer[serBufferLength++] = Serial.read();
       if(serBufferLength >=2 && serBuffer[serBufferLength-2] == 13 && serBuffer[serBufferLength-1] == 10) {
         digitalWrite(LED, HIGH);
-        bool success = radio.sendWithRetry(serBuffer[0], serBuffer+1, serBufferLength-2, 3, 40);
+        bool success = radio.sendWithRetry(serBuffer[0], serBuffer+1, serBufferLength-3, 3, 40);
         digitalWrite(LED, LOW);
         snprintf(screenLogLine, 20, "%d to %d (%s-%d)", serBuffer[1], (uint8_t)serBuffer[0], success?"OK":"NOK", radio.RSSI);
         serBufferLength = 0;
