@@ -105,7 +105,7 @@ void loop() {
         digitalWrite(LED, HIGH);
         bool success = radio.sendWithRetry(serBuffer[0], serBuffer+1, serBufferLength-2, 3, 40);
         digitalWrite(LED, LOW);
-        snprintf(screenLogLine, 20, "%d to %d (%s-%d)", serBuffer[1], serBuffer[0], success?"OK":"NOK", radio.RSSI);
+        snprintf(screenLogLine, 20, "%d to %d (%s-%d)", serBuffer[1], (uint8_t)serBuffer[0], success?"OK":"NOK", radio.RSSI);
         serBufferLength = 0;
         addToScreenLog(screenLogLine);
       }
