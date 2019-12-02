@@ -20,7 +20,7 @@
 
 #define PIN_PRO     6
 #define PIN_HW      5
-#define NODEID      254
+#define NODEID      1
 #define FREQUENCY   RF69_868MHZ
 #define ENCRYPTKEY  "passiondesfruits" //(16 bytes of your choice - keep the same on all encrypted nodes)
 #define ACK_TIME    50  // # of ms to wait for an ack
@@ -34,23 +34,33 @@
 #endif
 #define SERIAL_BAUD       115200
 
+struct HHCInput {
+  uint16_t messageId;
+  uint16_t destNode;
+  byte msgLength;
+  char message[64];
+};
+struct HHCOutput {
+  uint16_t srcNode;
+  int16_t rssi;
+  char message[64];
+};
+
+
 RFM69 radio;
 uint8_t networkId = 0;
 bool rfm69_hw = false;
 
-char gtwBuffer[100];
-byte gtwBufferLength;
 char serBuffer[100];
-byte serBufferLength;
-byte targetID=0;
-
+uint8_t serBufferLength = 0;
+struct HHCInput *serInData = (struct HHCInput *)serBuffer;
+struct HHCOutput *serOutData = (struct HHCOutput *)serBuffer;
 
 //Logging
 char netId[20]; //Node identification to be displayed
 char screenLogLine[20];
 char screenLog[LOGSIZE][20];
 unsigned long screenLogTimes[LOGSIZE];
-
 unsigned long lastLogMillis = 0;
 int screenLogIndex = 0;
 
@@ -75,43 +85,54 @@ void setup() {
 
   ssd1306_128x64_i2c_init();
   ssd1306_fillScreen(0x00);
+  ssd1306_setFixedFont(ssd1306xled_font6x8);  
 }
 
 void loop() {
     if (radio.receiveDone()) {
       digitalWrite(LED,HIGH);
-      int rssi = radio.RSSI;
-      if(radio.DATALEN > 97) {
-        gtwBufferLength = sprintf(gtwBuffer, "//ERR:Message.Size %u > 97 bytes", radio.DATALEN);
+      if(radio.DATALEN > 64) {
+        serBufferLength = sprintf(serBuffer, "//ERR:Message.Size %u > 64 bytes", radio.DATALEN);
       }
       else {
-        gtwBuffer[0] = radio.SENDERID;
-        memcpy(gtwBuffer+1, (const void *)&rssi, 2);
-        memcpy(gtwBuffer+3, (const void *)radio.DATA, radio.DATALEN);
-        gtwBufferLength = 3+radio.DATALEN;
+        serOutData->srcNode = radio.SENDERID;
+        serOutData->rssi = radio.RSSI;
+        memcpy(serOutData->message, radio.DATA, radio.DATALEN);
+        serBufferLength = radio.DATALEN + 4;
       }
       if (radio.ACKRequested())
         radio.sendACK();
 
-      Serial.write(gtwBuffer, gtwBufferLength);
+      Serial.write(serBuffer, serBufferLength);
       Serial.println("");
-      snprintf(screenLogLine, 20, "< %02d %03d %03d", (unsigned char)gtwBuffer[3], (uint8_t)gtwBuffer[0], (int)gtwBuffer[1]);
+      snprintf(screenLogLine, 20, "< %02d %03hu %03d", serOutData->message[0], serOutData->srcNode, serOutData->rssi);
       addToScreenLog(screenLogLine);
       digitalWrite(LED,LOW);
+      serBufferLength = 0;
     }
 
-    while(Serial.available() > 0) {
-      
+    while(Serial.available() > 0) {      
       serBuffer[serBufferLength++] = Serial.read();
       if(serBufferLength >=2 && serBuffer[serBufferLength-2] == 13 && serBuffer[serBufferLength-1] == 10) {
-        digitalWrite(LED, HIGH);
-        uint8_t destNode = (int)serBuffer[0];
-        Serial.print("//Sending to node "); Serial.println(destNode);
-        bool success = radio.sendWithRetry(destNode, serBuffer+1, serBufferLength-3, 3, 40);
+        digitalWrite(LED, HIGH);        
+        bool success = radio.sendWithRetry(serInData->destNode, serInData->message, serInData->msgLength, 3, 40);        
         digitalWrite(LED, LOW);        
-        snprintf(screenLogLine, 20, "%s %02d %03d %03d", success?">":"x", serBuffer[1], (uint8_t)serBuffer[0], success?radio.RSSI:0);
-        serBufferLength = 0;
+        
+        //Log
+        snprintf(screenLogLine, 20, "%s %02d %03hu %03hd", success?">":"x", (int)serInData->message[0], serInData->destNode, success?radio.RSSI:0);
         addToScreenLog(screenLogLine);
+        
+        //Report to Gateway
+        uint16_t msgId = serInData->messageId;
+        serOutData->srcNode = NODEID;
+        serOutData->rssi = radio.RSSI;
+        serOutData->message[0] = 0;
+        memcpy((serOutData->message)+1, &msgId, 2);
+        serOutData->message[3] = success?1:0;
+        Serial.write(serBuffer, 4+4);
+        Serial.println("");
+
+        serBufferLength = 0;
       }
     }
 
@@ -140,7 +161,7 @@ bool readDipSwitches() {
 void addToScreenLog(const char * log) {
     strncpy(screenLog[screenLogIndex], log, 20);
     screenLogTimes[screenLogIndex] = millis();
-    screenLogIndex = ++screenLogIndex % LOGSIZE;
+    screenLogIndex = (screenLogIndex+1) % LOGSIZE;
 }
 
 unsigned long lastPrint = millis();
@@ -149,8 +170,8 @@ bool draw(void ) {
   if(millis()-lastPrint < 1000)
     return false;
 
-  ssd1306_charF6x8(0, 0, netId);
-  ssd1306_charF6x8(0, 1, "      d mt rfi rss");
+  ssd1306_printFixed(0, 0, netId, STYLE_NORMAL);
+  ssd1306_printFixed(0, 8, "      d mt rfi rss", STYLE_NORMAL);
   
   int logIndex = 0;
   for(logIndex = 1 ; logIndex <= LOGSIZE ; logIndex++) 
@@ -166,8 +187,8 @@ bool draw(void ) {
     else 
       snprintf(screenLogLine, 20, "%02u:%02u", min, sec);
 
-    ssd1306_charF6x8(0, LOGSIZE-logIndex+2, screenLogLine);
-    ssd1306_charF6x8(35, LOGSIZE-logIndex+2, screenLog[i]);
+    ssd1306_printFixed(0, (LOGSIZE-logIndex+2)*8, screenLogLine, STYLE_NORMAL);
+    ssd1306_printFixed(35, (LOGSIZE-logIndex+2)*8, screenLog[i], STYLE_NORMAL);
   }
   lastPrint = millis();
   return true;
