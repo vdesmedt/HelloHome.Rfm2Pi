@@ -51,10 +51,12 @@ RFM69 radio;
 uint8_t networkId = 0;
 bool rfm69_hw = false;
 
-char serBuffer[100];
-uint8_t serBufferLength = 0;
-struct HHCInput *serInData = (struct HHCInput *)serBuffer;
-struct HHCOutput *serOutData = (struct HHCOutput *)serBuffer;
+char serOutBuffer[100];
+uint8_t serOutBufferLength = 0;
+struct HHCOutput *serOutData = (struct HHCOutput *)serOutBuffer;
+char serInBuffer[100];
+uint8_t serInBufferLength = 0;
+struct HHCInput *serInData = (struct HHCInput *)serInBuffer;
 
 //Logging
 char netId[20]; //Node identification to be displayed
@@ -92,47 +94,46 @@ void loop() {
     if (radio.receiveDone()) {
       digitalWrite(LED,HIGH);
       if(radio.DATALEN > 64) {
-        serBufferLength = sprintf(serBuffer, "//ERR:Message.Size %u > 64 bytes", radio.DATALEN);
+        serOutBufferLength = sprintf(serOutBuffer, "//ERR:Message.Size %u > 64 bytes", radio.DATALEN);
       }
       else {
         serOutData->srcNode = radio.SENDERID;
         serOutData->rssi = radio.RSSI;
         memcpy(serOutData->message, radio.DATA, radio.DATALEN);
-        serBufferLength = radio.DATALEN + 4;
+        serOutBufferLength = radio.DATALEN + 4;
       }
       if (radio.ACKRequested())
         radio.sendACK();
 
-      Serial.write(serBuffer, serBufferLength);
+      Serial.write(serOutBuffer, serOutBufferLength);
       Serial.println("");
       snprintf(screenLogLine, 20, "< %02d %03hu %03d", serOutData->message[0], serOutData->srcNode, serOutData->rssi);
       addToScreenLog(screenLogLine);
       digitalWrite(LED,LOW);
-      serBufferLength = 0;
+      serOutBufferLength = 0;
     }
 
     while(Serial.available() > 0) {      
-      serBuffer[serBufferLength++] = Serial.read();
-      if(serBufferLength >=2 && serBuffer[serBufferLength-2] == 13 && serBuffer[serBufferLength-1] == 10) {
+      serInBuffer[serInBufferLength++] = Serial.read();
+      if(serInBufferLength >=2 && serInBuffer[serInBufferLength-2] == 13 && serInBuffer[serInBufferLength-1] == 10) {
         digitalWrite(LED, HIGH);        
         bool success = radio.sendWithRetry(serInData->destNode, serInData->message, serInData->msgLength, 3, 40);        
         digitalWrite(LED, LOW);        
         
         //Log
-        snprintf(screenLogLine, 20, "%s %02d %03hu %03hd", success?">":"x", (int)serInData->message[0], serInData->destNode, success?radio.RSSI:0);
+        snprintf(screenLogLine, 20, "%s %02d %03hu %03d", success?">":"x", (int)serInData->message[0], serInData->destNode, success?radio.RSSI:0);
         addToScreenLog(screenLogLine);
         
-        //Report to Gateway
-        uint16_t msgId = serInData->messageId;
+        //Report to Gateway        
         serOutData->srcNode = NODEID;
-        serOutData->rssi = radio.RSSI;
+        serOutData->rssi = 0;
         serOutData->message[0] = 0;
-        memcpy((serOutData->message)+1, &msgId, 2);
+        memcpy((serOutData->message)+1, &(serInData->messageId), 2);
         serOutData->message[3] = success?1:0;
-        Serial.write(serBuffer, 4+4);
+        Serial.write(serOutBuffer, 8);
         Serial.println("");
-
-        serBufferLength = 0;
+        Serial.flush();
+        serInBufferLength = 0;
       }
     }
 
