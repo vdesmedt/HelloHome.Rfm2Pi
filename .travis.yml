@@ -19,7 +19,6 @@
 # Travis CI documentation (see above).
 #
 
-
 #
 # Template #1: General project. Test it using existing `platformio.ini`.
 #
@@ -47,7 +46,6 @@ deploy:
   skip_cleanup: true
   on:
     tags: true
-
 #
 # Template #2: The project is intended to by used as a library with examples
 #
